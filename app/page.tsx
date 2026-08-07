@@ -123,7 +123,7 @@ export default function VintageFinanceTracker() {
     }
   };
 
-  // CALCULATIONS
+  // BASE CALCULATIONS
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter(t => {
       const tDate = new Date(t.date);
@@ -141,6 +141,31 @@ export default function VintageFinanceTracker() {
       }
     });
     return { totalIncome: inc, totalExpense: exp, totalShodaqoh: shod };
+  }, [currentMonthTransactions]);
+
+  // NEW: AGGREGATED CALCULATIONS FOR UI LIST
+  const aggregatedExpenses = useMemo(() => {
+    const expenses = currentMonthTransactions.filter(t => t.type === 'Expense');
+    const grouped = expenses.reduce((acc, curr) => {
+      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(grouped)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [currentMonthTransactions]);
+
+  const aggregatedIncomes = useMemo(() => {
+    const incomes = currentMonthTransactions.filter(t => t.type === 'Income');
+    const grouped = incomes.reduce((acc, curr) => {
+      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(grouped)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount);
   }, [currentMonthTransactions]);
 
   const remaining = totalIncome - totalExpense;
@@ -179,11 +204,9 @@ export default function VintageFinanceTracker() {
       @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Pacifico&display=swap');
       .sunburst-bg { background: repeating-conic-gradient(from 0deg, #df7c6b 0deg 15deg, #f4ecd8 15deg 30deg, #88aeb2 30deg 45deg, #f4ecd8 45deg 60deg); }
       .noise-overlay { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
-      .custom-tooltip { background: #f4ecd8; border: 2px solid #7a1c4b; padding: 5px 10px; font-weight: bold; box-shadow: 4px 4px 0px #7a1c4b; color: #7a1c4b; }
     `}} />
   );
 
-  // UI LOGIN
   if (!session) {
     return (
       <div className="min-h-screen sunburst-bg relative font-['Josefin_Sans'] text-[#7a1c4b] p-4 flex justify-center items-center overflow-hidden">
@@ -191,19 +214,11 @@ export default function VintageFinanceTracker() {
         <div className="absolute inset-0 noise-overlay pointer-events-none opacity-[0.15] mix-blend-multiply"></div>
         <div className="relative z-10 w-full max-w-md bg-[#f4ecd8] border-4 border-[#7a1c4b] shadow-[12px_12px_0px_#7a1c4b] rounded-2xl p-8 text-center">
           <h1 className="font-['Pacifico'] text-5xl text-[#7a1c4b] drop-shadow-[2px_2px_0px_#f4ecd8] [text-shadow:3px_3px_0px_#df7c6b,5px_5px_0px_#7a1c4b] -rotate-2 mb-8">
-            Welkam
+            Retroholic
           </h1>
           <form onSubmit={handleAuth} className="flex flex-col gap-4">
-            <input 
-              type="email" placeholder="Email..." required
-              value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-              className="bg-transparent border-2 border-[#7a1c4b] p-3 font-bold focus-within:shadow-[4px_4px_0px_#df7c6b] outline-none"
-            />
-            <input 
-              type="password" placeholder="Password..." required
-              value={authPassword} onChange={e => setAuthPassword(e.target.value)}
-              className="bg-transparent border-2 border-[#7a1c4b] p-3 font-bold focus-within:shadow-[4px_4px_0px_#df7c6b] outline-none"
-            />
+            <input type="email" placeholder="Email..." required value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="bg-transparent border-2 border-[#7a1c4b] p-3 font-bold focus-within:shadow-[4px_4px_0px_#df7c6b] outline-none" />
+            <input type="password" placeholder="Password..." required value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="bg-transparent border-2 border-[#7a1c4b] p-3 font-bold focus-within:shadow-[4px_4px_0px_#df7c6b] outline-none" />
             <button type="submit" disabled={authLoading} className="bg-[#df7c6b] text-[#f4ecd8] font-bold uppercase tracking-widest text-lg py-3 border-2 border-[#7a1c4b] shadow-[6px_6px_0px_#7a1c4b] hover:shadow-[2px_2px_0px_#7a1c4b] hover:translate-y-1 hover:translate-x-1 transition-all">
               {authLoading ? 'Processing...' : isLoginMode ? 'Enter System' : 'Create Account'}
             </button>
@@ -216,7 +231,6 @@ export default function VintageFinanceTracker() {
     );
   }
 
-  // UI MAIN DASHBOARD
   return (
     <>
       <RetroStyles />
@@ -225,7 +239,6 @@ export default function VintageFinanceTracker() {
 
         <div className="relative z-10 w-full max-w-2xl bg-[#f4ecd8] border-4 border-[#7a1c4b] shadow-[12px_12px_0px_#7a1c4b] rounded-2xl p-6 sm:p-10 my-4 md:my-8">
           
-          {/* HEADER & NAV */}
           <div className="absolute top-4 right-4">
             <button onClick={handleLogout} className="p-2 border-2 border-[#7a1c4b] hover:bg-[#df7c6b] hover:text-[#f4ecd8] transition-colors" title="Logout">
               <LogOut className="w-5 h-5" />
@@ -235,7 +248,7 @@ export default function VintageFinanceTracker() {
           <div className="text-center mb-10 flex flex-col items-center">
             <span className="uppercase tracking-[0.3em] text-xs font-bold mb-2">Introducing</span>
             <h1 className="font-['Pacifico'] text-5xl md:text-6xl text-[#7a1c4b] drop-shadow-[3px_3px_0px_#f4ecd8] [text-shadow:4px_4px_0px_#df7c6b,6px_6px_0px_#7a1c4b] -rotate-2 mb-2">
-              Ridwan
+              Retroholic
             </h1>
             
             <div className="flex items-center justify-center gap-6 mt-6 border-y-2 border-[#7a1c4b] py-3 w-full max-w-xs">
@@ -253,7 +266,6 @@ export default function VintageFinanceTracker() {
              <div className="text-center py-10 font-bold text-xl animate-pulse">Loading Data...</div>
           ) : (
             <>
-              {/* DONUT CHART (Now with Tooltip) */}
               <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-8 bg-white/40 p-6 rounded-xl border-2 border-[#7a1c4b]">
                 <div className="relative w-48 h-48 drop-shadow-xl">
                   <ResponsiveContainer width="100%" height="100%">
@@ -275,7 +287,7 @@ export default function VintageFinanceTracker() {
                           return null;
                         }} 
                       />
-                      </PieChart>
+                    </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span className="text-5xl drop-shadow-md">{emoji}</span>
@@ -298,7 +310,6 @@ export default function VintageFinanceTracker() {
                 </div>
               </div>
 
-              {/* FORM */}
               <div className="mb-10 bg-white/40 p-6 rounded-xl border-2 border-[#7a1c4b]">
                 <h3 className="uppercase font-bold text-center mb-4 tracking-widest border-b-2 border-[#7a1c4b] pb-2">Add New Record</h3>
                 <form onSubmit={handleAddTransaction} className="flex flex-col gap-4">
@@ -338,17 +349,17 @@ export default function VintageFinanceTracker() {
                 </form>
               </div>
 
-              {/* TRANSACTION LIST (With Delete Icon on Hover) */}
+              {/* LIST AGGREGATION: Removed Trash icon since it's grouped data */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div className="bg-[#f4ecd8] border-2 border-[#7a1c4b] p-4 shadow-[4px_4px_0px_#7a1c4b]">
                   <h3 className="font-['Pacifico'] text-2xl text-[#df7c6b] border-b-2 border-[#7a1c4b] pb-2 mb-4 text-center">Expenses</h3>
                   <div className="space-y-3 font-bold">
-                    {currentMonthTransactions.filter(t => t.type === 'Expense').map(t => (
-                      <div key={t.id} className="flex justify-between items-center group text-sm relative">
+                    {aggregatedExpenses.length === 0 && <div className="text-center text-sm opacity-60">No expenses logged.</div>}
+                    {aggregatedExpenses.map(t => (
+                      <div key={t.category} className="flex justify-between items-center text-sm relative">
                         <span className="w-24 truncate">{t.category}</span>
                         <span className="flex-1 border-b-2 border-dotted border-[#7a1c4b]/30 mx-2"></span>
-                        <span className="text-[#df7c6b] group-hover:hidden">{formatRp(t.amount)}</span>
-                        <button onClick={() => handleDelete(t.id)} className="hidden group-hover:block text-red-500 hover:text-red-700 bg-[#f4ecd8] px-2"><Trash2 className="w-4 h-4" /></button>
+                        <span className="text-[#df7c6b]">{formatRp(t.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -357,12 +368,12 @@ export default function VintageFinanceTracker() {
                 <div className="bg-[#f4ecd8] border-2 border-[#7a1c4b] p-4 shadow-[4px_4px_0px_#7a1c4b]">
                   <h3 className="font-['Pacifico'] text-2xl text-[#88aeb2] border-b-2 border-[#7a1c4b] pb-2 mb-4 text-center">Incomes</h3>
                   <div className="space-y-3 font-bold">
-                    {currentMonthTransactions.filter(t => t.type === 'Income').map(t => (
-                      <div key={t.id} className="flex justify-between items-center group text-sm relative">
+                    {aggregatedIncomes.length === 0 && <div className="text-center text-sm opacity-60">No incomes logged.</div>}
+                    {aggregatedIncomes.map(t => (
+                      <div key={t.category} className="flex justify-between items-center text-sm relative">
                         <span className="w-24 truncate">{t.category}</span>
                         <span className="flex-1 border-b-2 border-dotted border-[#7a1c4b]/30 mx-2"></span>
-                        <span className="text-[#88aeb2] group-hover:hidden">{formatRp(t.amount)}</span>
-                        <button onClick={() => handleDelete(t.id)} className="hidden group-hover:block text-red-500 hover:text-red-700 bg-[#f4ecd8] px-2"><Trash2 className="w-4 h-4" /></button>
+                        <span className="text-[#88aeb2]">{formatRp(t.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -379,7 +390,6 @@ export default function VintageFinanceTracker() {
           )}
         </div>
 
-        {/* MODAL RAW DATA */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#7a1c4b]/80 backdrop-blur-sm">
             <div className="bg-[#f4ecd8] border-4 border-[#7a1c4b] shadow-[8px_8px_0px_#000] rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col relative overflow-hidden">
